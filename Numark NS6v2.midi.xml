@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <MixxxControllerPreset mixxxVersion="2.1.0+" schemaVersion="1">
   <info>
-      <name>Numark NS6</name>
+      <name>Numark NS6-V2</name>
       <author>maurojuniorr</author>
-      <description>4 channel MIDI Mapping for Numark NS6</description>
-      <manual>numark_ns6</manual>
+      <description>4 channel MIDI Mapping for Numark N4</description>
+      <manual>numark_n4</manual>
   </info>
   <controller id="N4 MIDI 1">
     <scriptfiles>
       <file filename="common-controller-scripts.js"/>
       <file filename="lodash.mixxx.js"/>
       <file filename="midi-components-0.0.js"/>
-      <file functionprefix="NumarkNS6" filename="Numark-NS6-scripts.js"/>
+      <file functionprefix="NumarkNS6" filename="Numark-NS6v2-scripts.js"/>
     </scriptfiles>
     <controls>
-      <control>
+<control>
         <group>[Channel1]</group>
         <key>playposition</key>
         <description>Barra de Busca Deck 1</description>
@@ -317,13 +317,13 @@
         </options>
       </control>
       <control>
-          <group>[Channel1]</group>
-          <key>NumarkNS6.Decks[1].topContainer.btnSample4.input</key>
-          <status>0x91</status>
-          <midino>0x16</midino>
-          <options>
+        <group>[Channel1]</group>
+        <key>NumarkNS6.Decks[1].topContainer.btnSample4.input</key>
+        <status>0x91</status>
+        <midino>0x16</midino>
+        <options>
           <script-binding />
-          </options>
+        </options>
       </control>
       <control>
         <group>[Channel2]</group>
@@ -1131,7 +1131,7 @@
         <status>0x92</status>
         <midino>0x10</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1275,7 +1275,7 @@
       <control>
         <group>[Channel2]</group>
         <key>NumarkNS6.Decks[2].playButton.input</key>
-        <status>0x92</status> 
+        <status>0x92</status>
         <midino>0x11</midino>
         <options>
           <script-binding />
@@ -1341,7 +1341,7 @@
         <status>0x91</status>
         <midino>0x0F</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1350,7 +1350,7 @@
         <status>0x81</status>
         <midino>0x0F</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1359,7 +1359,7 @@
         <status>0x92</status>
         <midino>0x0F</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1368,7 +1368,7 @@
         <status>0x82</status>
         <midino>0x0F</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1377,7 +1377,7 @@
         <status>0x93</status>
         <midino>0x0F</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1386,16 +1386,16 @@
         <status>0x83</status>
         <midino>0x0F</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
-        <group>[Channel4]</group>
+      <group>[Channel4]</group>
         <key>NumarkNS6.Decks[4].syncButton.input</key>
         <status>0x94</status>
         <midino>0x0F</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1404,7 +1404,7 @@
         <status>0x84</status>
         <midino>0x0F</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1422,7 +1422,7 @@
         <status>0x92</status>
         <midino>0x1E</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1499,7 +1499,7 @@
       </control>
       <control>
         <group>[Channel3]</group>
-        <key>NumarkNS6.Decks[3].keylockButton.input</key>        
+        <key>NumarkNS6.Decks[3].keylockButton.input</key>
         <status>0x93</status>
         <midino>0x1B</midino>
         <options>
@@ -1553,7 +1553,7 @@
       </control>
       <control>
         <group>[Channel1]</group>
-        <key>NumarkNS6.Decks[1].pitchRangeWorkaround</key>
+        <key>NumarkNS6.Decks[1].pitchRange.input</key>
         <status>0x91</status>
         <midino>0x1A</midino>
         <options>
@@ -1562,7 +1562,7 @@
       </control>
       <control>
         <group>[Channel2]</group>
-        <key>NumarkNS6.Decks[2].pitchRangeWorkaround</key>
+        <key>NumarkNS6.Decks[2].pitchRange.input</key>
         <status>0x92</status>
         <midino>0x1A</midino>
         <options>
@@ -1571,7 +1571,7 @@
       </control>
       <control>
         <group>[Channel3]</group>
-        <key>NumarkNS6.Decks[3].pitchRangeWorkaround</key>
+        <key>NumarkNS6.Decks[3].pitchRange.input</key>
         <status>0x93</status>
         <midino>0x1A</midino>
         <options>
@@ -1580,21 +1580,20 @@
       </control>
       <control>
         <group>[Channel4]</group>
-        <key>NumarkNS6.Decks[4].pitchRangeWorkaround</key>
+        <key>NumarkNS6.Decks[4].pitchRange.input</key>
         <status>0x94</status>
         <midino>0x1A</midino>
         <options>
           <script-binding />
         </options>
       </control>
-     
       <control>
         <group>[Channel1]</group>
         <key>NumarkNS6.jogTouch14bit</key>
         <status>0x91</status>
         <midino>0x2C</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1603,7 +1602,7 @@
         <status>0x81</status>
         <midino>0x2C</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1624,7 +1623,7 @@
         <status>0x92</status>
         <midino>0x2C</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1633,7 +1632,7 @@
         <status>0x82</status>
         <midino>0x2C</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1656,7 +1655,7 @@
         <status>0x93</status>
         <midino>0x2C</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1665,7 +1664,7 @@
         <status>0x83</status>
         <midino>0x2C</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1687,7 +1686,7 @@
         <status>0x94</status>
         <midino>0x2C</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1696,7 +1695,7 @@
         <status>0x84</status>
         <midino>0x2C</midino>
         <options>
-        <script-binding />
+          <script-binding />
         </options>
       </control>
       <control>
@@ -1713,13 +1712,13 @@
         <key>NumarkNS6.jogMove14bit</key>
         <status>0xB4</status>
         <midino>0x20</midino>
-        <options>
+                <options>
         <script-binding />
         </options>
       </control>
 
 
-
+    
 
       <control>
         <group>[Channel1]</group>

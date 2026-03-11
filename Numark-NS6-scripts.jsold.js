@@ -1,7 +1,4 @@
 var NumarkNS6 = {};
-
-
-// --- 2. CONFIGURAÇÕES E MOTOR DE LEDs ---
 NumarkNS6.Decks = [];
 NumarkNS6.jogMSB = [0, 0, 0, 0, 0];
 NumarkNS6.jogLSB = [0, 0, 0, 0, 0];
@@ -9,6 +6,8 @@ NumarkNS6.lastJogValue = [0, 0, 0, 0, 0];
 NumarkNS6.blinkState = 0;
 NumarkNS6.blinkTimer = 0;
 NumarkNS6.scratchSettings = { "alpha": 1.0/4, "beta": 1.0/4/32, "jogResolution": 2500, "vinylSpeed": 33.33 };
+
+
 // --- 2. MOTOR DE LEDs (O "Coração") ---
 NumarkNS6.updatePlayCueLEDs = function(deckNum, midiChannel) {
     var group = "[Channel" + deckNum + "]";
@@ -88,6 +87,7 @@ NumarkNS6.startBlinkTimer = function() {
         }
     });
 };
+
 NumarkNS6.searchAmplification = 5; // multiplier for the jogwheel when the search button is held down.
 
 NumarkNS6.warnAfterTime = 30; // Acts like the "End of Track warning" setting within the waveform settings.
@@ -167,15 +167,21 @@ NumarkNS6.CrossfaderChangeCallback = function(value, group, control) {
     NumarkNS6.storedCrossfaderParams[control] = value;
 };
 
-// --- 4. INICIALIZAÇÃO ---
 NumarkNS6.init = function() {
-    midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.length);
-    NumarkNS6.rateRanges[0]=engine.getValue("[Channel1]", "rateRange");
-
-
+    NumarkNS6.rateRanges[0] = engine.getValue("[Channel1]", "rateRange");
     NumarkNS6.Decks = [];
+    NumarkNS6.Mixer = new NumarkNS6.MixerTemplate();
+    // Inicia o timer único e blindado
+    NumarkNS6.startBlinkTimer();
+
+    midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.length);
+    
     for (var i = 1; i <= 4; i++) {
+        
+        // Criamos o Deck (passando o índice 1-4)
         NumarkNS6.Decks[i] = new NumarkNS6.Deck(i);
+        
+        // Criamos um escopo fechado (IIFE) para cada conexão para evitar conflitos de variáveis
         (function(dIdx) {
             var g = "[Channel" + dIdx + "]";
             engine.makeConnection(g, "play", function() { if (NumarkNS6.Decks[dIdx]) NumarkNS6.updatePlayCueLEDs(dIdx, NumarkNS6.Decks[dIdx].midiChannel); });
@@ -198,31 +204,31 @@ NumarkNS6.init = function() {
             });       
          })(i);
     }
-    // 👇 A CORREÇÃO ESTÁ AQUI: Instanciando o Mixer para que o XML consiga encontrá-lo
+
     NumarkNS6.Mixer = new NumarkNS6.MixerTemplate();
-   // NumarkNS6.startBlinkTimer(); // Inicia o motor de piscagem retornar!
+    
+    // Inicia os Timers de LED (Certifique-se de que NumarkNS6.initLEDTimers() ou o blinkTimer já existam)
+    // Se você seguiu o passo anterior, o timer global já estará rodando.
+
     midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.length);
 };
-
-
 NumarkNS6.topContainer = function(channel) {
     this.group = "[Channel"+channel+"]";
     var theContainer = this;
-    var dChan = channel; // Captura o canal para as funções internas
 
     this.btnEffect1 = new components.Button({
-        midi: [0x90+channel, 0x2B, 0xB0+channel, 0x0B],
+        midi: [0x90+channel, 0x13, 0xB0+channel, 0x0B],
         shift: function() {
             this.group="[EffectRack1_EffectUnit1]";
             this.type=components.Button.prototype.types.toggle;
-            this.inKey = "hotcue_1_clear";
-            this.outKey = "hotcue_1_enabled";
+            this.inKey="group_[Channel"+channel+"]_enable";
+            this.outKey="group_[Channel"+channel+"]_enable";
         },
         unshift: function() {
             this.group=theContainer.group;
             this.type=components.Button.prototype.types.push;
-            this.inKey = "hotcue_1_activate";
-            this.outKey = "hotcue_1_enabled";
+            this.inKey="loop_in";
+            this.outKey="loop_in";
         },
     });
     this.btnEffect2 = new components.Button({
@@ -230,43 +236,41 @@ NumarkNS6.topContainer = function(channel) {
         shift: function() {
             this.group="[EffectRack1_EffectUnit2]";
             this.type=components.Button.prototype.types.toggle;
-            this.inKey = "hotcue_2_clear";
-            this.outKey = "hotcue_2_enabled";
+            this.inKey="group_[Channel"+channel+"]_enable";
+            this.outKey="group_[Channel"+channel+"]_enable";
         },
         unshift: function() {
             this.group=theContainer.group;
             this.type=components.Button.prototype.types.push;
-            this.inKey = "hotcue_2_activate";
-            this.outKey = "hotcue_2_enabled";
+            this.inKey="loop_out";
+            this.outKey="loop_out";
         },
     });
     this.btnSample3 = new components.Button({
         midi: [0x90+channel, 0x15, 0xB0+channel, 0x0D],
         shift: function() {
             this.type=components.Button.prototype.types.toggle;
-            this.inKey = "hotcue_3_clear";
-            this.outKey = "hotcue_3_enabled";
+            this.inKey="slip_enabled";
+            this.outKey="slip_enabled";
         },
         unshift: function() {
             this.type=components.Button.prototype.types.push;
-            this.inKey = "hotcue_3_activate";
-            this.outKey = "hotcue_3_enabled";
+            this.inKey="beatloop_activate";
+            this.outKey="beatloop_activate";
         },
     });
     this.btnSample4 = new components.Button({
         midi: [0x90+channel, 0x16, 0xB0+channel, 0x0E],
         outKey: "loop_enabled",
         shift: function() {
-            this.inKey = "hotcue_4_clear";
-            this.outKey = "hotcue_4_enabled";
+            this.type=components.Button.prototype.types.toggle;
+            this.inKey="reloop_andstop";
         },
         unshift: function() {
             this.type=components.Button.prototype.types.push;
-            this.inKey = "hotcue_4_activate";
-            this.outKey = "hotcue_4_enabled";
+            this.inKey="reloop_toggle";
         },
     });
-
     // custom Hotcue Buttons
     this.hotcueButtons=[];
 
@@ -329,10 +333,9 @@ NumarkNS6.topContainer = function(channel) {
                     midi.sendShortMsg(0xB0+channel, 0x0B+i, (i-this.hotCuePage)?0x00:0x7F);
                 }
             }
-            this.timer = engine.beginTimer(1000, function() {
+            this.timer = engine.beginTimer(1000, () => {
                 theContainer.reconnectComponents();
-                // Aqui não usamos "this.timer" porque o contexto muda dentro da function
-                // Mas o timer é parado automaticamente pelo terceiro argumento 'true'
+                this.timer = 0;
             }, true);
         },
         shift: function() {
@@ -471,29 +474,44 @@ NumarkNS6.MixerTemplate = function() {
 NumarkNS6.MixerTemplate.prototype = new components.ComponentContainer();
 
 NumarkNS6.Deck = function(channel) {
-    components.Deck.call(this, channel);
     var groupName = "[Channel" + channel + "]"; 
     this.deckNum = channel;
     this.midiChannel = channel;
     this.group = groupName;
     this.rateRangeEntry = 0;
+    this.rangeIndex = 0; 
+    this.rateRangeEntry = 0;
     var theDeck = this;
 
+    // 2. Inicialização do Componente Mixxx
+    components.Deck.call(this, channel);
+    this.topContainer = new NumarkNS6.topContainer(channel);
+  
 
-
-    // --- VARIÁVEIS DE ESTADO ---
+    // 3. Containers e Flags
     this.scratchMode = true; 
     this.isSearching = false;
-    // Inicializa o componente base do framework
 
-    this.topContainer = new NumarkNS6.topContainer(channel);
-    
+       // --- PITCH BEND (Adicionado aqui no lugar certo!) ---
+    this.pitchBendMinus = new components.Button({
+        midi: [0x90 + channel, 0x18, 0xB0 + channel, 0x3D],
+        group: groupName,
+        key: "rate_temp_down",
+        shift: function() { this.inKey = "rate_temp_down_small"; },
+        unshift: function() { this.inKey = "rate_temp_down"; }
+    });
 
+    this.pitchBendPlus = new components.Button({
+        midi: [0x90 + channel, 0x19, 0xB0 + channel, 0x3C],
+        group: groupName,
+        key: "rate_temp_up",
+        shift: function() { this.inKey = "rate_temp_up_small"; },
+        unshift: function() { this.inKey = "rate_temp_up"; }
+    });
 
+    // --- FIREWALL LÓGICO: Injetamos o grupo em cada componente ---
 
-
-
-    // --- PLAY, CUE E SYNC ---
+   // --- PLAY, CUE E SYNC ---
     this.playButton = new components.PlayButton({
         midi: [0x90 + channel, 0x11, 0xB0 + channel, 0x09],
         group: groupName,
@@ -525,42 +543,27 @@ NumarkNS6.Deck = function(channel) {
         unshift: function() { this.inKey = "LoadSelectedTrack"; }
     });
 
+    // ... (Aqui você mantém seus Knobs de EQ e Gain que já funcionam) ...
 
+    this.bpmSlider = new components.Pot({
+        midi: [0xB0 + channel, 0x01, 0xB0 + channel, 0x37],
+        inKey: "rate",
+        group: groupName,
+        invert: true,
+    });
 
-    // Vincula todos os componentes ao grupo correto
+    // --- RECONECTAR COM SEGURANÇA ---
     this.reconnectComponents(function(c) {
+        // Se o componente não tiver grupo, ele herda o groupName deste objeto
         if (c.group === undefined || c.group === "") {
             c.group = groupName;
         }
-    });
-    this.shiftButton = new components.Button({
-        midi: [0x90+channel, 0x12, 0xB0+channel, 0x0A],
-        type: components.Button.prototype.types.powerWindow,
-        state: false, //custom property
-        inToggle: function() {
-            this.state=!this.state;
-            if (this.state) {
-                theDeck.shift();
-                NumarkNS6.Mixer.shift();
-            } else {
-                theDeck.unshift();
-                NumarkNS6.Mixer.unshift();
-            }
-            this.output(this.state);
-            theDeck.topContainer.reconnectComponents(function(component) {
-                if (component.group === undefined) {
-                    component.group = this.group;
-                }
-            });
-        },
     });
 
     this.shutdown = function() {
         this.topContainer.shutdown();
         this.cueButton.send(0);
         this.playButton.send(0);
-        this.pitchBendMinus.send(0);
-        this.pitchBendPlus.send(0);
     };
 };
 
@@ -581,72 +584,99 @@ NumarkNS6.shutdown = function() {
     // midi.sendSysexMsg(NumarkNS6.ShutoffSequence,NumarkNS6.ShutoffSequence.length);
 };
 // --- FUNÇÃO DE TOQUE GLOBAL (TOUCH) ---
-// --- 3. JOG WHEELS 14-BIT (FIX PARA O ERRO DE UNDEFINED) ---
-// --- FUNÇÃO DE TOQUE GLOBAL (TOUCH) ---
-
-
-NumarkNS6.jogMove14bit = function(channel, control, value, status, group) {
-    var deckNum = script.deckFromGroup(group);
-    if (control === 0x00) NumarkNS6.jogMSB[deckNum] = value;
-    if (control === 0x20) NumarkNS6.jogLSB[deckNum] = value;
-    if (control !== 0x20) return;
-
-    var fullValue = (NumarkNS6.jogMSB[deckNum] << 7) | NumarkNS6.jogLSB[deckNum];
-    if (NumarkNS6.lastJogValue[deckNum] === undefined) NumarkNS6.lastJogValue[deckNum] = fullValue;
-    var delta = fullValue - NumarkNS6.lastJogValue[deckNum];
-    NumarkNS6.lastJogValue[deckNum] = fullValue;
-    
-    if (delta > 8192) delta -= 16384;
-    else if (delta < -8192) delta += 16384;
-
-    if (engine.isScratching(deckNum)) {
-        engine.scratchTick(deckNum, delta);
-    } else {
-        engine.setValue(group, "jog", delta / 15);
-    }
-};
-// =========================================================
-// FUNÇÕES GLOBAIS DE HARDWARE (FINAL DO ARQUIVO)
-// =========================================================
-// =========================================================
-// FUNÇÕES GLOBAIS DE HARDWARE (FINAL DO ARQUIVO)
-// =========================================================
-NumarkNS6.scratchButtonInput = function(channel, control, value, status, group) {
-    // Ignora quando tira o dedo do botão
-    if (value === 0) return;
-
-    var deckNum = script.deckFromGroup(group);
-    if (!NumarkNS6.Decks[deckNum]) return;
-
-    var deck = NumarkNS6.Decks[deckNum];
-    
-    // Trava de segurança da variável
-    if (deck.scratchMode === undefined) {
-        deck.scratchMode = true;
-    }
-    
-    // Inverte a lógica (True = Scratch, False = Move)
-    deck.scratchMode = !deck.scratchMode;
-
-    var ledState = deck.scratchMode ? 0x7F : 0x00;
-
-    // O SEGREDO REVELADO PELA N4: O LED responde na porta CC 0x12!
-    midi.sendShortMsg(0xB0 + channel, 0x12, ledState); 
-};
-
+// --- FUNÇÃO DE TOQUE GLOBAL (TOUCH) ATUALIZADA ---
 NumarkNS6.jogTouch14bit = function(channel, control, value, status, group) {
     var deckNum = script.deckFromGroup(group);
-    
-    if (!NumarkNS6.Decks[deckNum]) return;
+    var theDeck = NumarkNS6.Decks[deckNum];
 
-    var isTouched = (value > 0);
-    
-    // A MÁGICA DO BOTÃO: Só ativa o Scratch se o botão estiver ligado!
-    if (isTouched && NumarkNS6.Decks[deckNum].scratchMode) {
-        engine.scratchEnable(deckNum, NumarkNS6.scratchSettings.jogResolution, 33.33, NumarkNS6.scratchSettings.alpha, NumarkNS6.scratchSettings.beta);
+    var isScratchButtonOn = (theDeck.jogWheelScratchEnable.scratchEnabled !== false);
+    var isTouched = (status & 0x10) || (value > 0);
+
+    if (isTouched && isScratchButtonOn) {
+        // Usando as variáveis do scratchSettings definidas no topo
+        engine.scratchEnable(deckNum, 
+            NumarkNS6.scratchSettings.jogResolution, 
+            NumarkNS6.scratchSettings.vinylSpeed, 
+            NumarkNS6.scratchSettings.alpha, 
+            NumarkNS6.scratchSettings.beta);
     } else {
-        // Se soltar o prato OU se o botão estiver desligado, libera o prato para Pitch Bend (Move)
         engine.scratchDisable(deckNum);
     }
 };
 
+// --- FUNÇÃO DE GIRO GLOBAL (MOVE) ---
+NumarkNS6.jogMove14bit = function(channel, control, value, status, group) {
+    var deckNum = script.deckFromGroup(group);
+
+    // Armazenamento 14-bit
+    if (control === 0x00) NumarkNS6.jogMSB[deckNum] = value;
+    if (control === 0x20) NumarkNS6.jogLSB[deckNum] = value;
+
+    // Sincroniza no byte LSB (0x20)
+    if (control !== 0x20) return;
+
+    var fullValue = (NumarkNS6.jogMSB[deckNum] << 7) | NumarkNS6.jogLSB[deckNum];
+    
+    if (NumarkNS6.lastJogValue[deckNum] === undefined) NumarkNS6.lastJogValue[deckNum] = fullValue;
+    var delta = fullValue - NumarkNS6.lastJogValue[deckNum];
+    NumarkNS6.lastJogValue[deckNum] = fullValue;
+
+    if (delta > 8192) delta -= 16384;
+    if (delta < -8192) delta += 16384;
+    if (delta === 0) return;
+
+    // AQUI É ONDE O SCRATCH ACONTECE:
+    if (engine.isScratching(deckNum)) {
+        engine.scratchTick(deckNum, delta);
+    } else {
+        // Modo CDJ (Bend Suave)
+        var sensitivity = 15; 
+        engine.setValue(group, "jog", delta / sensitivity);
+    }
+};
+
+NumarkNS6.updatePlayCueLEDs = function(deckNum, midiChannel) {
+    var group = "[Channel" + deckNum + "]";
+    var statusLED = 0xB0 + midiChannel; 
+    
+    var isPlaying = engine.getValue(group, "play");
+    var isLoaded = engine.getValue(group, "track_loaded");
+    // Consideramos no início se a posição for zero ou o arquivo acabou de carregar (-1)
+    var playPos = engine.getValue(group, "playposition");
+    var atStart = (playPos <= 0.001 || playPos === -1); 
+    
+    var playLED = 0x09;
+    var cueLED = 0x08;
+    var ON = 0x7F;
+    var OFF = 0x00;
+    var BLINK = NumarkNS6.blinkState ? ON : OFF;
+
+    if (!isLoaded) {
+        midi.sendShortMsg(statusLED, playLED, OFF);
+        midi.sendShortMsg(statusLED, cueLED, OFF);
+    } else if (isPlaying) {
+        // TOCANDO: Ambos ACESOS
+        midi.sendShortMsg(statusLED, playLED, ON);
+        midi.sendShortMsg(statusLED, cueLED, ON);
+    } else if (atStart) {
+        // PARADO NO CUE/INÍCIO: Cue ACESO, Play PISCA
+        midi.sendShortMsg(statusLED, playLED, BLINK);
+        midi.sendShortMsg(statusLED, cueLED, ON);
+    } else {
+        // PAUSADO NO MEIO: Ambos PISCANDO
+        midi.sendShortMsg(statusLED, playLED, BLINK);
+        midi.sendShortMsg(statusLED, cueLED, BLINK);
+    }
+};
+
+NumarkNS6.updateSyncLED = function(deckNum, midiChannel) {
+    var group = "[Channel" + deckNum + "]";
+    var statusLED = 0x90 + midiChannel; // 0x91 para Deck 1, 0x92 para Deck 2...
+    var syncNote = 0x0F; 
+    
+    var syncEnabled = engine.getValue(group, "sync_enabled");
+    var BLINK = NumarkNS6.blinkState ? 0x7F : 0x00;
+
+    // Se o Sync estiver ligado, ele entra no ciclo de piscagem
+    midi.sendShortMsg(statusLED, syncNote, syncEnabled ? BLINK : 0x00);
+};

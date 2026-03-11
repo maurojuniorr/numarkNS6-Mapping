@@ -67,11 +67,29 @@ NumarkNS6.updatePlayCueLEDs = function(deckNum, midiChannel) {
     }
 };
 
+//perfect dont touch!
 NumarkNS6.updateSyncLED = function(deckNum, midiChannel) {
     var group = "[Channel" + deckNum + "]";
-    var statusNote = 0x90 + midiChannel;
+    var midiChan = midiChannel;
+    
     var isSync = engine.getValue(group, "sync_enabled");
-    midi.sendShortMsg(statusNote, 0x0F, isSync ? NumarkNS6.blinkState : 0x00);
+    var isPlaying = engine.getValue(group, "play");
+    var beatActive = engine.getValue(group, "beat_active");
+
+    // 1. Se o Sync está desligado -> Apaga tudo
+    if (!isSync) {
+        midi.sendShortMsg(0xB0 + midiChan, 0x07, 0x00);
+        return;
+    }
+
+    // 2. Se está ligado E tocando -> Pulsa com a batida
+    if (isPlaying) {
+        midi.sendShortMsg(0xB0 + midiChan, 0x07, beatActive ? 0x7F : 0x00);
+    } 
+    // 3. Se está ligado E pausado -> Fica aceso fixo
+    else {
+        midi.sendShortMsg(0xB0 + midiChan, 0x07, 0x7F);
+    }
 };
 
 NumarkNS6.startBlinkTimer = function() {
@@ -172,29 +190,33 @@ midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.len
     
     NumarkNS6.Decks = [];
     for (var i = 1; i <= 4; i++) {
-            NumarkNS6.Decks[i] = new NumarkNS6.Deck(i);
-            (function(dIdx) {
-                var g = "[Channel" + dIdx + "]";
-                engine.makeConnection(g, "play", function() { if (NumarkNS6.Decks[dIdx]) NumarkNS6.updatePlayCueLEDs(dIdx, NumarkNS6.Decks[dIdx].midiChannel); });
-                engine.makeConnection(g, "sync_enabled", function() { if (NumarkNS6.Decks[dIdx]) NumarkNS6.updateSyncLED(dIdx, NumarkNS6.Decks[dIdx].midiChannel); });
-                engine.makeConnection(g, "track_loaded", function() { if (NumarkNS6.Decks[dIdx]) NumarkNS6.updatePlayCueLEDs(dIdx, NumarkNS6.Decks[dIdx].midiChannel); });
-                
-                // NOVA CONEXÃO: Aciona a função de LEDs no exato milissegundo que você pressiona o Cue
-                // 🔥 A MÁGICA: Piscar com a batida
-                engine.makeConnection(g, "beat_active", function(value) {
-                    var isSync = engine.getValue(g, "sync_enabled");
-                    var midiChan = NumarkNS6.Decks[dIdx].midiChannel;
-                    
-                    if (isSync) {
-                        // Se o Sync estiver ON, o LED segue o pulso da batida (1 = aceso, 0 = apagado)
-                        midi.sendShortMsg(0xB0 + midiChan, 0x07, value ? 0x7F : 0x00);
-                    } else {
-                        // Se o Sync estiver OFF, LED apagado
-                        midi.sendShortMsg(0xB0 + midiChan, 0x07, 0x00);
-                    }
-                });       
-            })(i);
+        NumarkNS6.Decks[i] = new NumarkNS6.Deck(i);
+        (function(dIdx) {
+            var g = "[Channel" + dIdx + "]";
+            var mChan = NumarkNS6.Decks[dIdx].midiChannel;
+
+            // Atualiza Play/Cue/Sync em qualquer mudança de estado importante
+            engine.makeConnection(g, "play", function() { 
+                NumarkNS6.updatePlayCueLEDs(dIdx, mChan);
+                NumarkNS6.updateSyncLED(dIdx, mChan); 
+            });
+            
+            engine.makeConnection(g, "sync_enabled", function() { 
+                NumarkNS6.updateSyncLED(dIdx, mChan); 
+            });
+            
+            engine.makeConnection(g, "track_loaded", function() { 
+                NumarkNS6.updatePlayCueLEDs(dIdx, mChan); 
+            });
+
+            // O pulso da batida agora chama a função centralizada
+            engine.makeConnection(g, "beat_active", function() {
+                NumarkNS6.updateSyncLED(dIdx, mChan);
+            });
+            
+        })(i);
     }
+
     // create xFader callbacks and trigger them to fill NumarkNS6.storedCrossfaderParams
     _.forEach(NumarkNS6.scratchXFader, function(value, control) {
         var connectionObject = engine.makeConnection("[Mixer Profile]", control, NumarkNS6.CrossfaderChangeCallback.bind(this));
@@ -796,10 +818,6 @@ NumarkNS6.shutdown = function() {
     }
     // midi.sendSysexMsg(NumarkNS6.ShutoffSequence,NumarkNS6.ShutoffSequence.length);
 };
-// --- FUNÇÃO DE TOQUE GLOBAL (TOUCH) ---
-// --- 3. JOG WHEELS 14-BIT (FIX PARA O ERRO DE UNDEFINED) ---
-// --- FUNÇÃO DE TOQUE GLOBAL (TOUCH) ---
-
 
 NumarkNS6.jogMove14bit = function(channel, control, value, status, group) {
     var deckNum = script.deckFromGroup(group);
@@ -821,12 +839,7 @@ NumarkNS6.jogMove14bit = function(channel, control, value, status, group) {
         engine.setValue(group, "jog", delta / 15);
     }
 };
-// =========================================================
-// FUNÇÕES GLOBAIS DE HARDWARE (FINAL DO ARQUIVO)
-// =========================================================
-// =========================================================
-// FUNÇÕES GLOBAIS DE HARDWARE (FINAL DO ARQUIVO)
-// =========================================================
+
 NumarkNS6.scratchButtonInput = function(channel, control, value, status, group) {
     // Ignora quando tira o dedo do botão
     if (value === 0) return;

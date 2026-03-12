@@ -5,6 +5,9 @@ NumarkNS6.jogMSB = [0, 0, 0, 0, 0];
 NumarkNS6.jogLSB = [0, 0, 0, 0, 0];
 NumarkNS6.lastJogValue = [0, 0, 0, 0, 0];
 NumarkNS6.lastJogRingValue = [0, 0, 0, 0, 0];
+// Rastreia se o Harmonic Sync foi ativado para cada deck
+NumarkNS6.harmonicSyncActive = [null, false, false, false, false];
+NumarkNS6.isProcessingHarmonic = [null, false, false, false, false];
 NumarkNS6.blinkState = 0;
 NumarkNS6.blinkTimer = 0;
 NumarkNS6.scratchSettings = { "alpha": 1.0/4, "beta": 1.0/4/32, "jogResolution": 2500, "vinylSpeed": 33.33 };
@@ -272,6 +275,13 @@ midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.len
         (function(dIdx) {
             var g = "[Channel" + dIdx + "]";
             var mChan = NumarkNS6.Decks[dIdx].midiChannel;
+            midi.sendShortMsg(0xB0 + dIdx, 0x18, 0x01); 
+    
+            // Apaga os LEDs de tamanho (1, 2, 4, 8) para começar limpo
+            midi.sendShortMsg(0xB0 + dIdx, 0x19, 0x00);
+            midi.sendShortMsg(0xB0 + dIdx, 0x1A, 0x00);
+            midi.sendShortMsg(0xB0 + dIdx, 0x1B, 0x00);
+            midi.sendShortMsg(0xB0 + dIdx, 0x1C, 0x00);
 
             // Atualiza Play/Cue/Sync em qualquer mudança de estado importante
             engine.makeConnection(g, "play", function() { 
@@ -283,8 +293,13 @@ midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.len
                 NumarkNS6.updateSyncLED(dIdx, mChan); 
             });
             
-            engine.makeConnection(g, "track_loaded", function() { 
-                NumarkNS6.updatePlayCueLEDs(dIdx, mChan); 
+            engine.makeConnection(g, "track_loaded", function(value) {
+                if (value > 0) {
+                    NumarkNS6.harmonicSyncActive[dIdx] = false;
+                    NumarkNS6.updateAutoLoopLEDs(dIdx);
+                    NumarkNS6.updatePlayCueLEDs(dIdx, mChan); 
+
+                }
             });
             // 🔥 O ATALHO: Atualiza os LEDs assim que o botão Cue é tocado
             engine.makeConnection(g, "cue_default", function() {
@@ -303,9 +318,10 @@ midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.len
                     NumarkNS6.updateJogRing(dIdx); 
                 }
             });
-            // --- Sincronia de LEDs de Loop ---
+            // Sincronia de LEDs: Limpa marcadores ao sair do loop
+            // Sincronia de LEDs: Limpa marcadores ao sair do loop (Reset Geral)
             engine.makeConnection(g, "loop_enabled", function(value) {
-                // Atualiza o LED ON/OFF (0x15) e a régua de tamanhos
+                // Apenas gerencia o hardware
                 midi.sendShortMsg(0xB0 + dIdx, 0x15, value ? 0x7F : 0x00);
                 NumarkNS6.updateAutoLoopLEDs(dIdx);
             });
@@ -314,12 +330,18 @@ midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.len
                 // Sempre que o tamanho mudar (via botão ou mouse), atualiza os LEDs
                 NumarkNS6.updateAutoLoopLEDs(dIdx);
             });
-
+            // Adicione/Verifique dentro do for no init:
+            engine.makeConnection(g, "loop_start_position", function() {
+                NumarkNS6.updateAutoLoopLEDs(dIdx);
+            });
+            engine.makeConnection(g, "loop_end_position", function() {
+                NumarkNS6.updateAutoLoopLEDs(dIdx);
+            });
             
         })(i);
     }
     
-    engine.beginTimer(500, function() {
+    engine.beginTimer(1000, function() {
         // 1. Define o Layer inicial para Decks 1 e 2 (0x00 = Apagado = Decks Primários)
         midi.sendShortMsg(0xB0, 0x50, 0x00); 
         midi.sendShortMsg(0xB0, 0x51, 0x00); 
@@ -1113,37 +1135,51 @@ NumarkNS6.loopMoveRightInput = function(channel, control, value, status, group) 
     }
 };
 // =======================================================
-// SEÇÃO DE LOOP CONSOLIDADA - 4 DECKS
+// SEÇÃO DE LOOP CONSOLIDADA - 4 DECKS (MANUAL + AUTO)
 // =======================================================
 
-// Array de Estados (Persistente) - true = Auto/Red, false = Manual/White
+// 1. Array de Estados (DEVE FICAR NO TOPO DO ARQUIVO OU AQUI)
 if (NumarkNS6.deckLoopMode === undefined) {
     NumarkNS6.deckLoopMode = [null, true, true, true, true];
 }
 
-// --- MOTOR DE LEDs (Só acende se o Loop estiver LIGADO) ---
+// 2. Função de LED (Mantenha-a acima da loopButtonInput)
 NumarkNS6.updateAutoLoopLEDs = function(deckNum) {
     var group = "[Channel" + deckNum + "]";
     var isAuto = NumarkNS6.deckLoopMode[deckNum];
     var isEnabled = engine.getValue(group, "loop_enabled");
     var currentSize = engine.getValue(group, "beatloop_size");
 
-    // SÓ acende o LED em Vermelho (0x01) se: Modo AUTO estiver ativo E o Loop estiver ligado
-    midi.sendShortMsg(0xB0 + deckNum, 0x19, (isEnabled && isAuto && currentSize === 1) ? 0x01 : 0x00);
-    midi.sendShortMsg(0xB0 + deckNum, 0x1A, (isEnabled && isAuto && currentSize === 2) ? 0x01 : 0x00);
-    midi.sendShortMsg(0xB0 + deckNum, 0x1B, (isEnabled && isAuto && currentSize === 4) ? 0x01 : 0x00);
-    midi.sendShortMsg(0xB0 + deckNum, 0x1C, (isEnabled && isAuto && currentSize === 8) ? 0x01 : 0x00);
+    if (isAuto) {
+        // AUTO: Vermelho (0x01) - Apenas o tamanho ativo brilha
+        midi.sendShortMsg(0xB0 + deckNum, 0x19, (isEnabled && currentSize === 1) ? 0x01 : 0x00);
+        midi.sendShortMsg(0xB0 + deckNum, 0x1A, (isEnabled && currentSize === 2) ? 0x01 : 0x00);
+        midi.sendShortMsg(0xB0 + deckNum, 0x1B, (isEnabled && currentSize === 4) ? 0x01 : 0x00);
+        midi.sendShortMsg(0xB0 + deckNum, 0x1C, (isEnabled && currentSize === 8) ? 0x01 : 0x00);
+    } else {
+        // MANUAL: Branco (0x02)
+        if (NumarkNS6.isProcessingHarmonic[deckNum]) return; // Se estiver processando, não mexe nos LEDs agora!
+        var hasIn = engine.getValue(group, "loop_start_position") !== -1;
+        var isHarmSync = NumarkNS6.harmonicSyncActive[deckNum];
+        
+        midi.sendShortMsg(0xB0 + deckNum, 0x19, hasIn ? 0x02 : 0x00); 
+        midi.sendShortMsg(0xB0 + deckNum, 0x1A, isEnabled ? 0x02 : 0x00);
+        midi.sendShortMsg(0xB0 + deckNum, 0x1C, isEnabled ? 0x02 : 0x00);
+        
+        // Botão 3: Fica branco se estiver "Harmonizado"
+        midi.sendShortMsg(0xB0 + deckNum, 0x1B, isHarmSync ? 0x02 : 0x00);
+    }
 };
-
-// --- BOTÃO MODE (Nota 0x27) ---
 NumarkNS6.loopModeInput = function(channel, control, value, status, group) {
     if (value > 0) {
         var deckNum = status & 0x0F; 
         NumarkNS6.deckLoopMode[deckNum] = !NumarkNS6.deckLoopMode[deckNum];
         
-        // Alterna entre Vermelho (0x01) e Branco (0x02)
-        var color = NumarkNS6.deckLoopMode[deckNum] ? 0x01 : 0x02;
-        midi.sendShortMsg(0xB0 + deckNum, 0x18, color); 
+        var isAuto = NumarkNS6.deckLoopMode[deckNum];
+        midi.sendShortMsg(0xB0 + deckNum, 0x18, isAuto ? 0x01 : 0x02); 
+
+        // CRITICAL FIX: Limpa pontos fantasmas ao alternar modos
+        engine.setValue(group, "loop_clear", 1);
         
         NumarkNS6.updateAutoLoopLEDs(deckNum);
     }
@@ -1153,43 +1189,81 @@ NumarkNS6.loopModeInput = function(channel, control, value, status, group) {
 NumarkNS6.loopOnOffInput = function(channel, control, value, status, group) {
     if (value > 0) {
         var isEnabled = engine.getValue(group, "loop_enabled");
+        // Desliga o loop ou sai dele
         engine.setValue(group, "loop_enabled", isEnabled ? 0 : 1);
     }
 };
 
-// --- BOTÕES DE DISPARO (Lógica Idêntica para 0x28 e 0x29) ---
-NumarkNS6.loopButtonInput = function(channel, control, value, status, group) {
-    if (value > 0) {
-        var deckNum = status & 0x0F;
-        var isAuto = NumarkNS6.deckLoopMode[deckNum];
+// --- BOTÕES DE PERFORMANCE (0x28 a 0x2B) ---
 
+NumarkNS6.loopButtonInput = function(channel, control, value, status, group) {
+    var deckNum = status & 0x0F;
+    var isAuto = NumarkNS6.deckLoopMode[deckNum];
+    var btnIdx = control - 0x27; 
+
+    if (value > 0) { 
         if (isAuto) {
-            // MODO AUTOLOOP: Seta o tamanho e ativa imediatamente
-            // Aplicando a mesma lógica que funcionou no Loop In para todos
-            if (control === 0x28) { 
-                engine.setValue(group, "beatloop_size", 1); 
-                engine.setValue(group, "beatloop_1_activate", 1); 
-            }
-            if (control === 0x29) { 
-                engine.setValue(group, "beatloop_size", 2); 
-                engine.setValue(group, "beatloop_2_activate", 1); 
-            }
-            if (control === 0x2A) { 
-                engine.setValue(group, "beatloop_size", 4); 
-                engine.setValue(group, "beatloop_4_activate", 1); 
-            }
-            if (control === 0x2B) { 
-                engine.setValue(group, "beatloop_size", 8); 
-                engine.setValue(group, "beatloop_8_activate", 1); 
+            // MODO AUTO (Toggle Inteligente - Mantido)
+            var sizes = [0, 1, 2, 4, 8]; 
+            var selectedSize = sizes[btnIdx];
+            if (engine.getValue(group, "loop_enabled") && engine.getValue(group, "beatloop_size") === selectedSize) {
+                engine.setValue(group, "loop_enabled", 0);
+            } else {
+                engine.setValue(group, "beatloop_size", selectedSize);
+                engine.setValue(group, "beatloop_" + selectedSize + "_activate", 1);
             }
         } else {
-            // MODO MANUAL: Comportamento clássico
-            if (control === 0x28) engine.setValue(group, "loop_in", 1);
-            if (control === 0x29) engine.setValue(group, "loop_out", 1);
-            if (control === 0x2A) engine.setValue(group, "reloop_toggle", 1);
-            if (control === 0x2B) engine.setValue(group, "reloop_toggle", 1);
+            // MODO MANUAL: 100% Personalizado
+            var isLoopActive = engine.getValue(group, "loop_enabled");
+            var totalSamples = engine.getValue(group, "track_samples");
+
+            switch(btnIdx) {
+                case 1: // LOOP IN: Jump or Set
+                    if (isLoopActive) {
+                        var startPos = engine.getValue(group, "loop_start_position");
+                        if (startPos !== -1 && totalSamples > 0) engine.setValue(group, "playposition", startPos / totalSamples);
+                    } else {
+                        engine.setValue(group, "loop_in", 1); engine.setValue(group, "loop_in", 0);
+                    }
+                    break;
+
+                case 2: // LOOP OUT: Jump or Set
+                    if (isLoopActive) {
+                        var endPos = engine.getValue(group, "loop_end_position");
+                        if (endPos !== -1 && totalSamples > 0) engine.setValue(group, "playposition", endPos / totalSamples);
+                    } else {
+                        engine.setValue(group, "loop_out", 1); engine.setValue(group, "loop_out", 0);
+                        if (engine.getValue(group, "loop_start_position") !== -1) engine.setValue(group, "loop_enabled", 1);
+                    }
+                    break;
+
+                    case 3: // SELECT: HARMONIC SYNC COM TRAVA DE CORES
+                    // 1. Ativa a trava para o motor de LEDs não sobrescrever
+                    NumarkNS6.isProcessingHarmonic[deckNum] = true;
+                    
+                    // 2. Comando para o Mixxx
+                    engine.setValue(group, "sync_key", 1);
+                    
+                    // 3. Feedback visual: Força o Vermelho (0x01)
+                    midi.sendShortMsg(0xB0 + deckNum, 0x1B, 0x01);
+                    
+                    // 4. Timer de "Processamento" (Aumentei para 1.5s para ser perceptível)
+                    engine.beginTimer(300, function() {
+                        // Libera a trava e marca como ativo
+                        NumarkNS6.isProcessingHarmonic[deckNum] = false;
+                        NumarkNS6.harmonicSyncActive[deckNum] = true;
+                        
+                        // Agora sim, chama a atualização para mudar para Branco
+                        NumarkNS6.updateAutoLoopLEDs(deckNum);
+                    }, true);
+                    return; // IMPORTANTE: O return impede que o código abaixo (update geral) rode agora 
+
+                case 4: // RELOOP / EXIT
+                    engine.setValue(group, "reloop_exit", 1);
+                    engine.setValue(group, "reloop_exit", 0);
+                    break;
+            }
         }
-        
         NumarkNS6.updateAutoLoopLEDs(deckNum);
     }
 };

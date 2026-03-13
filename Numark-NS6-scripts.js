@@ -20,6 +20,26 @@ NumarkNS6.scratchSettings = {
     "vinylSpeed": 33.33 
 };
 
+// 🔥 O HANDSHAKE CAPTURADO DO SERATO (SysEx Mestre)
+NumarkNS6.SysExInit1 = [0xF0, 0x00, 0x01, 0x3F, 0x7F, 0x79, 0x50, 0x00, 0x10, 0x04, 0x01, 0x00, 0x00, 0x00, 0x04, 0x04, 0x0E, 0x0F, 0x00, 0x00, 0x0E, 0x05, 0x0F, 0x04, 0x0C, 0x06, 0x0B, 0x0F, 0x0D, 0x0C, 0xF7];
+NumarkNS6.SysExInit2 = [0xF0, 0x00, 0x01, 0x3F, 0x7F, 0x79, 0x60, 0x00, 0x01, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0xF7];
+
+NumarkNS6.searchAmplification = 5; 
+NumarkNS6.warnAfterTime = 30; 
+NumarkNS6.blinkInterval = 1000; 
+NumarkNS6.encoderResolution = 0.05; 
+NumarkNS6.resetHotCuePageOnTrackLoad = true; 
+NumarkNS6.cueReverseRoll = true; 
+NumarkNS6.hotcuePageIndexBehavior = true;
+NumarkNS6.rateRanges = [0, 0.06, 0.24];
+NumarkNS6.globalShift = false;
+
+NumarkNS6.scratchXFader = {
+    xFaderMode: 0, 
+    xFaderCurve: 999.60,
+    xFaderCalibration: 1.0
+};
+
 // =======================================================
 // 1. MOTOR VISUAL (LEDs de Estado)
 // =======================================================
@@ -84,12 +104,12 @@ NumarkNS6.updateReverseLED = function(deckNum) {
 };
 
 // =======================================================
-// 2. MOTOR DO PRATO (Matemática Clássica e Segura)
+// 2. MOTOR DO PRATO (Otimizado)
 // =======================================================
 
 NumarkNS6.updateJogRing = function (deckNum) {
     if (!NumarkNS6.Decks[deckNum]) return;
-    
+
     var group = "[Channel" + deckNum + "]";
     var mChan = NumarkNS6.Decks[deckNum].midiChannel;
     var duration = engine.getValue(group, "duration");
@@ -103,32 +123,21 @@ NumarkNS6.updateJogRing = function (deckNum) {
         return;
     }
 
-    // Matemática original restaurada (Livre de bugs do QtScript)
-    var currentSecs = playPos * duration;
-    var revsPerSec = 33.33333 / 60.0;
-    var currentRev = currentSecs * revsPerSec;
-    var revFraction = currentRev - Math.floor(currentRev);
-
-    // Multiplica pelos 21 LEDs
+    // RPM a 33.33 = ~1.8 segundos por rotação
+    var secsPerRev = 1.8;
+    var currentSec = playPos * duration;
+    
+    var revFraction = (currentSec / secsPerRev) % 1;
     var ledIndex = Math.floor(revFraction * 21) + 1;
-
-    // TRAVA DE SEGURANÇA
-    if (ledIndex > 21) ledIndex = 21;
-    if (ledIndex < 1) ledIndex = 1;
+    ledIndex = Math.max(1, Math.min(21, ledIndex));
 
     var finalValue = ledIndex;
 
-    // Alerta de fim de música (Pisca ou fica Vermelho)
-    var timeRemaining = duration - currentSecs;
-    if (duration > 0 && timeRemaining <= NumarkNS6.warnAfterTime) {
-        if (NumarkNS6.blinkState === 0) {
-            finalValue = 0x00;
-        } else {
-            finalValue = ledIndex + 0x40; // 64 (0x40) acende a luz vermelha
-        }
+    var timeRemaining = duration - currentSec;
+    if (timeRemaining <= NumarkNS6.warnAfterTime) {
+        finalValue = (NumarkNS6.blinkState === 0) ? 0x00 : (ledIndex + 0x40);
     }
 
-    // Só envia se mudar
     if (NumarkNS6.lastJogRingValue[deckNum] !== finalValue) {
         midi.sendShortMsg(0xB0 + mChan, 0x3A, finalValue);
         NumarkNS6.lastJogRingValue[deckNum] = finalValue;
@@ -136,7 +145,7 @@ NumarkNS6.updateJogRing = function (deckNum) {
 };
 
 // =======================================================
-// 3. GESTÃO DE TIMERS (Igualado ao Serato)
+// 3. GESTÃO DE TIMERS
 // =======================================================
 
 NumarkNS6.startTimers = function () {
@@ -153,8 +162,6 @@ NumarkNS6.startTimers = function () {
     }
 
     if (NumarkNS6.displayTimer === 0) {
-        // 🔥 O SEGREDO ESTÁ AQUI: 100ms em vez de 40ms.
-        // Dá tempo para o hardware da Numark desligar o LED anterior!
         NumarkNS6.displayTimer = engine.beginTimer(100, function () {
             for (var i = 1; i <= 4; i++) {
                 if (NumarkNS6.Decks[i]) {
@@ -166,25 +173,8 @@ NumarkNS6.startTimers = function () {
 };
 
 // =======================================================
-// 4. CONFIGURAÇÕES GERAIS E INICIALIZAÇÃO
+// 4. INICIALIZAÇÃO E CLASSES BASES
 // =======================================================
-
-NumarkNS6.searchAmplification = 5; 
-NumarkNS6.warnAfterTime = 30; 
-NumarkNS6.blinkInterval = 1000; 
-NumarkNS6.encoderResolution = 0.05; 
-NumarkNS6.resetHotCuePageOnTrackLoad = true; 
-NumarkNS6.cueReverseRoll = true; 
-NumarkNS6.hotcuePageIndexBehavior = true;
-NumarkNS6.rateRanges = [0, 0.06, 0.24];
-NumarkNS6.QueryStatusMessage = [0xF0, 0x00, 0x01, 0x3F, 0x7F, 0x47, 0x60, 0x00, 0x01, 0x54, 0x01, 0x00, 0x00, 0x00, 0x00, 0xF7];
-NumarkNS6.globalShift = false;
-
-NumarkNS6.scratchXFader = {
-    xFaderMode: 0, 
-    xFaderCurve: 999.60,
-    xFaderCalibration: 1.0
-};
 
 components.Encoder.prototype.input = function (_c, _ctrl, value) {
     this.inSetParameter(this.inGetParameter() + ((value === 0x01) ? NumarkNS6.encoderResolution : -NumarkNS6.encoderResolution));
@@ -210,7 +200,10 @@ NumarkNS6.CrossfaderChangeCallback = function (value, group, control) {
 };
 
 NumarkNS6.init = function () {
-    midi.sendSysexMsg(NumarkNS6.QueryStatusMessage, NumarkNS6.QueryStatusMessage.length);
+    // 🚨 ACORDA A PLACA EXATAMENTE COMO O SERATO FAZ
+    midi.sendSysexMsg(NumarkNS6.SysExInit1, NumarkNS6.SysExInit1.length);
+    midi.sendSysexMsg(NumarkNS6.SysExInit2, NumarkNS6.SysExInit2.length);
+
     NumarkNS6.rateRanges[0] = engine.getValue("[Channel1]", "rateRange");
 
     NumarkNS6.Decks = [];
@@ -220,6 +213,9 @@ NumarkNS6.init = function () {
         (function (dIdx) {
             var g = "[Channel" + dIdx + "]";
             var mChan = NumarkNS6.Decks[dIdx].midiChannel;
+            
+            // 🔥 O SEGREDO DO PRATO: Comando CC 0x3B com valor 0x01 (Força Modo Ponto)
+            midi.sendShortMsg(0xB0 + mChan, 0x3B, 0x01);
             
             engine.makeConnection(g, "play", function () { 
                 NumarkNS6.updatePlayCueLEDs(dIdx, mChan);
@@ -568,7 +564,7 @@ NumarkNS6.Deck = function(channel) {
         this.pitchBendPlus.send(0); this.pitchBendMinus.send(0); this.cueButton.send(0);
         this.playButton.send(0); this.shiftButton.send(0); this.tapButton.send(0);
         if (theDeck.blinkTimer !== 0) engine.stopTimer(theDeck.blinkTimer);
-        midi.sendShortMsg(0xB0, 0x1D + channel, 0); 
+        midi.sendShortMsg(0xB0, 0x1D+channel, 0); 
     };
 };
 
@@ -586,7 +582,7 @@ NumarkNS6.shutdown = function () {
 };
 
 // =======================================================
-// 7. FUNÇÕES DE PROCESSAMENTO DO JOG / PERFORMANCE
+// 6. FUNÇÕES DE PROCESSAMENTO DO JOG E LOOPS
 // =======================================================
 
 NumarkNS6.jogMove14bit = function(channel, control, value, status, group) {

@@ -322,10 +322,26 @@ NumarkNS6.init = function () {
 NumarkNS6.MixerTemplate = function() {
     this.deckChangeL = new components.Button({ midi: [0xB0, 0x50], input: function(_c, _ctrl, value) { this.output(value); } });
     this.deckChangeR = new components.Button({ midi: [0xB0, 0x51], input: function(_c, _ctrl, value) { this.output(value); } });
-    this.channelInputSwitcherL = new components.Button({ midi: [0x90, 0x49], group: "[Channel3]", inKey: "mute" });
-    this.channelInputSwitcherR = new components.Button({ midi: [0x90, 0x4A], group: "[Channel4]", inKey: "mute" });
-
+    // ==========================================================
+    // 🎚️ SELETORES DE ENTRADA (PC vs LINE/PHONO/MIC)
+    // Hardware gerencia o áudio; Mixxx apenas Muta/Desmuta o deck.
+    // ==========================================================
     
+    this.channelInputSwitcher1 = new components.Button({
+        midi: [0x90, 0x47], group: "[Channel1]", inKey: "mute", type: components.Button.prototype.types.powerWindow
+    });
+
+    this.channelInputSwitcher2 = new components.Button({
+        midi: [0x90, 0x48], group: "[Channel2]", inKey: "mute", type: components.Button.prototype.types.powerWindow
+    });
+
+    this.channelInputSwitcher3 = new components.Button({
+        midi: [0x90, 0x49], group: "[Channel3]", inKey: "mute", type: components.Button.prototype.types.powerWindow
+    });
+
+    this.channelInputSwitcher4 = new components.Button({
+        midi: [0x90, 0x4A], group: "[Channel4]", inKey: "mute", type: components.Button.prototype.types.powerWindow
+    });    
     
     this.changeCrossfaderContour = new components.Button({
         midi: [0x90, 0x4B], state: false,
@@ -642,32 +658,54 @@ NumarkNS6.Deck = function(channel) {
             theDeck.gridAdjustMode = false;
         }
     };
-
-    this.orientationButtonLeft = new components.Button({
-        midi: [0x90, 0x32+channel*2, 0xB0, 0x42+channel*2], key: "orientation",
-        input: function(_c, _ctrl, value) {
-            if (!this.ignoreNext) {
-                if (value===0x7F) { this.inSetValue(0); theDeck.orientationButtonRight.ignoreNextOff = true; this.ignoreNextOff=false; }
-                else if (!this.ignoreNextOff && value===0x00) this.inSetValue(1);
-            } else this.ignoreNext=false;
-        },
-        output: function(value) { this.send(value===0?0x7F:0x00); this.ignoreNext=true; if (value===0) theDeck.orientationButtonRight.ignoreNextOff = true; }
-    });
-
     this.skipButtonInput = function(ch, ctrl, value) {
         theDeck.skipMode = (value > 0);
         if (value === 0) theDeck.skipAccumulator = 0;
     };
 
-    this.orientationButtonRight = new components.Button({
-        midi: [0x90, 0x33+channel*2, 0xB0, 0x43+channel*2], key: "orientation",
-        input: function(_c, _ctrl, value) {
-            if (!this.ignoreNext) {
-                if (value===0x7F) { this.inSetValue(2); theDeck.orientationButtonLeft.ignoreNextOff = true; this.ignoreNextOff=false; }
-                else if (!this.ignoreNextOff && value===0x00) this.inSetValue(1);
-            } else this.ignoreNext=false;
-        },
-        output: function(value) { this.send(value===2?0x7F:0x00); if (value===2) theDeck.orientationButtonLeft.ignoreNextOff = true; this.ignoreNext=true; }
+    // ==========================================================
+    // 🎚️ CROSSFADER ASSIGN (A / THRU / B)
+    // ==========================================================
+    var noteL = 0x33 + (this.deckNum * 2); 
+    var noteR = 0x34 + (this.deckNum * 2); 
+    var dNum = this.deckNum;
+
+    // Chave para a ESQUERDA (A)
+    this.crossfaderAssignLeft = new components.Button({
+        midi: [0x90, noteL], 
+        group: groupName,
+        input: function (ch, ctrl, value, status, group) {
+            if (value > 0) {
+                engine.setValue(group, "orientation", 0); // Lado A
+            } else {
+                if (engine.getValue(group, "orientation") === 0) {
+                    engine.setValue(group, "orientation", 1); // THRU
+                }
+            }
+        }
+    });
+
+    // Chave para a DIREITA (B)
+    this.crossfaderAssignRight = new components.Button({
+        midi: [0x90, noteR], 
+        group: groupName,
+        input: function (ch, ctrl, value, status, group) {
+            if (value > 0) {
+                engine.setValue(group, "orientation", 2); // Lado B
+            } else {
+                if (engine.getValue(group, "orientation") === 2) {
+                    engine.setValue(group, "orientation", 1); // THRU
+                }
+            }
+        }
+    });
+
+    // 💡 Sincroniza as luzes físicas da NS6 com a tela do Mixxx
+    engine.makeConnection(groupName, "orientation", function(value) {
+        var ledL = noteL + 0x10; // O LED na Numark é sempre a Nota + 16 (0x10)
+        var ledR = noteR + 0x10; 
+        midi.sendShortMsg(0xB0, ledL, (value === 0) ? 0x7F : 0x00);
+        midi.sendShortMsg(0xB0, ledR, (value === 2) ? 0x7F : 0x00);
     });
 
     this.pflButton = new components.Button({

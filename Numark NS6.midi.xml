@@ -1181,148 +1181,151 @@
       </control>
 
       <control>
-        <group>[Channel1]</group>
-        <key>NumarkNS6.Decks[1].orientationButtonLeft.input</key>
-        <status>0x90</status>
-        <midino>0x35</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel1]</group>
+          <key>NumarkNS6.Decks[1].crossfaderAssignLeft.input</key>
+          <status>0x90</status>
+          <midino>0x35</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel1]</group>
-        <key>NumarkNS6.Decks[1].orientationButtonRight.input</key>
-        <status>0x90</status>
-        <midino>0x36</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel1]</group>
+          <key>NumarkNS6.Decks[1].crossfaderAssignLeft.input</key>
+          <status>0x80</status>
+          <midino>0x35</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel2]</group>
-        <key>NumarkNS6.Decks[2].orientationButtonLeft.input</key>
-        <status>0x90</status>
-        <midino>0x37</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel1]</group>
+          <key>NumarkNS6.Decks[1].crossfaderAssignRight.input</key>
+          <status>0x90</status>
+          <midino>0x36</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel2]</group>
-        <key>NumarkNS6.Decks[2].orientationButtonRight.input</key>
-        <status>0x90</status>
-        <midino>0x38</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel1]</group>
+          <key>NumarkNS6.Decks[1].crossfaderAssignRight.input</key>
+          <status>0x80</status>
+          <midino>0x36</midino>
+          <options>
+              <script-binding/>
+          </options>
+      </control>
+
+      <control>
+          <group>[Channel2]</group>
+          <key>NumarkNS6.Decks[2].crossfaderAssignLeft.input</key>
+          <status>0x90</status>
+          <midino>0x37</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel3]</group>
-        <key>NumarkNS6.Decks[3].orientationButtonLeft.input</key>
-        <status>0x90</status>
-        <midino>0x39</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel2]</group>
+          <key>NumarkNS6.Decks[2].crossfaderAssignLeft.input</key>
+          <status>0x80</status>
+          <midino>0x37</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel3]</group>
-        <key>NumarkNS6.Decks[3].orientationButtonRight.input</key>
-        <status>0x90</status>
-        <midino>0x3A</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel2]</group>
+          <key>NumarkNS6.Decks[2].crossfaderAssignRight.input</key>
+          <status>0x90</status>
+          <midino>0x38</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel4]</group>
-        <key>NumarkNS6.Decks[4].orientationButtonLeft.input</key>
-        <status>0x90</status>
-        <midino>0x3B</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel2]</group>
+          <key>NumarkNS6.Decks[2].crossfaderAssignRight.input</key>
+          <status>0x80</status>
+          <midino>0x38</midino>
+          <options>
+              <script-binding/>
+          </options>
+      </control>
+
+      <control>
+          <group>[Channel3]</group>
+          <key>NumarkNS6.Decks[3].crossfaderAssignLeft.input</key>
+          <status>0x90</status>
+          <midino>0x39</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel4]</group>
-        <key>NumarkNS6.Decks[4].orientationButtonRight.input</key>
-        <status>0x90</status>
-        <midino>0x3C</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel3]</group>
+          <key>NumarkNS6.Decks[3].crossfaderAssignLeft.input</key>
+          <status>0x80</status>
+          <midino>0x39</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel1]</group>
-        <key>NumarkNS6.Decks[1].orientationButtonLeft.input</key>
-        <status>0x80</status>
-        <midino>0x35</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel3]</group>
+          <key>NumarkNS6.Decks[3].crossfaderAssignRight.input</key>
+          <status>0x90</status>
+          <midino>0x3A</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel1]</group>
-        <key>NumarkNS6.Decks[1].orientationButtonRight.input</key>
-        <status>0x80</status>
-        <midino>0x36</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel3]</group>
+          <key>NumarkNS6.Decks[3].crossfaderAssignRight.input</key>
+          <status>0x80</status>
+          <midino>0x3A</midino>
+          <options>
+              <script-binding/>
+          </options>
+      </control>
+
+      <control>
+          <group>[Channel4]</group>
+          <key>NumarkNS6.Decks[4].crossfaderAssignLeft.input</key>
+          <status>0x90</status>
+          <midino>0x3B</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel2]</group>
-        <key>NumarkNS6.Decks[2].orientationButtonLeft.input</key>
-        <status>0x80</status>
-        <midino>0x37</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel4]</group>
+          <key>NumarkNS6.Decks[4].crossfaderAssignLeft.input</key>
+          <status>0x80</status>
+          <midino>0x3B</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel2]</group>
-        <key>NumarkNS6.Decks[2].orientationButtonRight.input</key>
-        <status>0x80</status>
-        <midino>0x38</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel4]</group>
+          <key>NumarkNS6.Decks[4].crossfaderAssignRight.input</key>
+          <status>0x90</status>
+          <midino>0x3C</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
       <control>
-        <group>[Channel3]</group>
-        <key>NumarkNS6.Decks[3].orientationButtonLeft.input</key>
-        <status>0x80</status>
-        <midino>0x39</midino>
-        <options>
-          <script-binding />
-        </options>
-      </control>
-      <control>
-        <group>[Channel3]</group>
-        <key>NumarkNS6.Decks[3].orientationButtonRight.input</key>
-        <status>0x80</status>
-        <midino>0x3A</midino>
-        <options>
-          <script-binding />
-        </options>
-      </control>
-      <control>
-        <group>[Channel4]</group>
-        <key>NumarkNS6.Decks[4].orientationButtonLeft.input</key>
-        <status>0x80</status>
-        <midino>0x3B</midino>
-        <options>
-          <script-binding />
-        </options>
-      </control>
-      <control>
-        <group>[Channel4]</group>
-        <key>NumarkNS6.Decks[4].orientationButtonRight.input</key>
-        <status>0x80</status>
-        <midino>0x3C</midino>
-        <options>
-          <script-binding />
-        </options>
+          <group>[Channel4]</group>
+          <key>NumarkNS6.Decks[4].crossfaderAssignRight.input</key>
+          <status>0x80</status>
+          <midino>0x3C</midino>
+          <options>
+              <script-binding/>
+          </options>
       </control>
 
       <control>
@@ -1562,40 +1565,63 @@
         </options>
       </control>
       <control>
-        <group>[Channel3]</group>
-        <key>NumarkNS6.Mixer.channelInputSwitcherL.input</key>
-        <status>0x90</status>
-        <midino>0x49</midino>
-        <options>
-          <script-binding/>
-        </options>
+          <group>[Channel1]</group>
+          <key>NumarkNS6.Mixer.channelInputSwitcher1.input</key>
+          <status>0x90</status>
+          <midino>0x47</midino>
+          <options><script-binding/></options>
       </control>
       <control>
-        <group>[Channel4]</group>
-        <key>NumarkNS6.Mixer.channelInputSwitcherR.input</key>
-        <status>0x90</status>
-        <midino>0x4A</midino>
-        <options>
-          <script-binding/>
-        </options>
+          <group>[Channel1]</group>
+          <key>NumarkNS6.Mixer.channelInputSwitcher1.input</key>
+          <status>0x80</status>
+          <midino>0x47</midino>
+          <options><script-binding/></options>
+      </control>
+
+      <control>
+          <group>[Channel2]</group>
+          <key>NumarkNS6.Mixer.channelInputSwitcher2.input</key>
+          <status>0x90</status>
+          <midino>0x48</midino>
+          <options><script-binding/></options>
       </control>
       <control>
-        <group>[Channel3]</group>
-        <key>NumarkNS6.Mixer.channelInputSwitcherL.input</key>
-        <status>0x80</status>
-        <midino>0x49</midino>
-        <options>
-          <script-binding/>
-        </options>
+          <group>[Channel2]</group>
+          <key>NumarkNS6.Mixer.channelInputSwitcher2.input</key>
+          <status>0x80</status>
+          <midino>0x48</midino>
+          <options><script-binding/></options>
+      </control>
+
+      <control>
+          <group>[Channel3]</group>
+          <key>NumarkNS6.Mixer.channelInputSwitcher3.input</key>
+          <status>0x90</status>
+          <midino>0x49</midino>
+          <options><script-binding/></options>
       </control>
       <control>
-        <group>[Channel4]</group>
-        <key>NumarkNS6.Mixer.channelInputSwitcherR.input</key>
-        <status>0x80</status>
-        <midino>0x4A</midino>
-        <options>
-          <script-binding/>
-        </options>
+          <group>[Channel3]</group>
+          <key>NumarkNS6.Mixer.channelInputSwitcher3.input</key>
+          <status>0x80</status>
+          <midino>0x49</midino>
+          <options><script-binding/></options>
+      </control>
+
+      <control>
+          <group>[Channel4]</group>
+          <key>NumarkNS6.Mixer.channelInputSwitcher4.input</key>
+          <status>0x90</status>
+          <midino>0x4A</midino>
+          <options><script-binding/></options>
+      </control>
+      <control>
+          <group>[Channel4]</group>
+          <key>NumarkNS6.Mixer.channelInputSwitcher4.input</key>
+          <status>0x80</status>
+          <midino>0x4A</midino>
+          <options><script-binding/></options>
       </control>
       <control>
         <group>[Master]</group>

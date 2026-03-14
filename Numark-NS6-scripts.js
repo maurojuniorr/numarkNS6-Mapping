@@ -47,68 +47,63 @@ NumarkNS6.scratchXFader = {
 // =======================================================
 // 1. MOTOR VISUAL (LEDs de Estado)
 // =======================================================
-//Finished
+
 NumarkNS6.updatePlayCueLEDs = function(deckNum, midiChannel) {
     var group = "[Channel" + deckNum + "]";
     var statusCC = 0xB0 + midiChannel;
     var deck = NumarkNS6.Decks[deckNum];
     if (!deck) return;
 
+    // ==========================================
+    // 🛡️ TRAVA DE DECK VAZIO (Fim do Pisca-Pisca)
+    // ==========================================
+    var trackLoaded = engine.getValue(group, "track_loaded") > 0;
+    if (!trackLoaded) {
+        midi.sendShortMsg(statusCC, 0x09, 0x00); // Apaga Play
+        midi.sendShortMsg(statusCC, 0x08, 0x00); // Apaga Cue
+        return; // Aborta a função aqui, não faz mais nada
+    }
+
     var isPlaying = engine.getValue(group, "play") > 0;
-    var isCueing = engine.getValue(group, "cue_default") > 0; // O Mixxx sabe se o seu dedo está no botão!
+    var isCueing = engine.getValue(group, "cue_default") > 0;
 
     // ==========================================
     // 1. MODO SHIFT (Lógica da Intro)
     // ==========================================
     if (deck && deck.shiftButton && deck.shiftButton.state) {
-        
-        // LÓGICA DO PLAY (Intocada - Aceso se toca, Pisca se pausa)
         midi.sendShortMsg(statusCC, 0x09, isPlaying ? 0x7F : NumarkNS6.blinkState);
 
-        // LÓGICA DO CUE (Intro Start)
         var isIntroActivating = engine.getValue(group, "intro_start_activate") > 0;
-
         if (isIntroActivating) {
-            // Dedo apertando o botão: Dá a "piscada marota" na hora
             midi.sendShortMsg(statusCC, 0x08, 0x7F);
         } else if (isPlaying) {
-            // Música tocando: Fica totalmente apagado
             midi.sendShortMsg(statusCC, 0x08, 0x00);
         } else {
-            // Música parada: Verifica se a agulha está exatamente em cima da Intro
             var atIntro = false;
             var introStartPos = engine.getValue(group, "intro_start_position");
             var trackSamples = engine.getValue(group, "track_samples");
             var playPos = engine.getValue(group, "playposition");
 
             if (trackSamples > 0 && introStartPos !== -1) {
-                // Se a distância for quase zero, estamos na Intro
                 if (Math.abs((playPos * trackSamples) - introStartPos) < 5000) {
                     atIntro = true;
                 }
             }
-            
-            // Parada na Intro = Aceso. Fora da Intro = Apagado.
             midi.sendShortMsg(statusCC, 0x08, atIntro ? 0x7F : 0x00);
         }
-        return; // Sai da função para não executar a parte de baixo!
+        return; 
     }
 
     // ==========================================
-    // 2. MODO NORMAL (Intocável)
+    // 2. MODO NORMAL (Mantido conforme solicitado)
     // ==========================================
-    // LÓGICA DO PLAY (Restaurado para o estado Perfeito original com 0x7F)
     midi.sendShortMsg(statusCC, 0x09, isPlaying ? 0x7F : NumarkNS6.blinkState);
 
-    // LÓGICA DO CUE (Ultra-responsiva)
     if (isCueing) {
-        // Dedo no botão: O LED acende na hora (Isso substitui o nosso "flash" manual)
         midi.sendShortMsg(statusCC, 0x08, 0x7F);
     } else if (isPlaying) {
-        // Música tocando (sem dedo no botão): Apagado
         midi.sendShortMsg(statusCC, 0x08, 0x00);
     } else {
-        // Música pausada: Fica aceso no ponto, pisca se estiver noutro sítio
         var atCue = false;
         var playPos = engine.getValue(group, "playposition");
         var cuePoint = engine.getValue(group, "cue_point");
@@ -265,6 +260,8 @@ NumarkNS6.init = function () {
     midi.sendSysexMsg(NumarkNS6.SysExInit1, NumarkNS6.SysExInit1.length);
     midi.sendSysexMsg(NumarkNS6.SysExInit2, NumarkNS6.SysExInit2.length);
 
+    
+
 
     NumarkNS6.Decks = [];
     for (var i = 1; i <= 4; i++) {
@@ -304,9 +301,18 @@ NumarkNS6.init = function () {
             engine.makeConnection(g, "beatloop_size", function () { NumarkNS6.updateAutoLoopLEDs(dIdx); });
             engine.makeConnection(g, "loop_start_position", function () { NumarkNS6.updateAutoLoopLEDs(dIdx); });
             engine.makeConnection(g, "loop_end_position", function () { NumarkNS6.updateAutoLoopLEDs(dIdx); });
+
+           
         })(i);
      
     }
+    engine.makeConnection("[Channel1]", "rate", NumarkNS6.updateBpmMeter);
+    engine.makeConnection("[Channel2]", "rate", NumarkNS6.updateBpmMeter);
+    engine.makeConnection("[Channel1]", "file_bpm", NumarkNS6.updateBpmMeter);
+    engine.makeConnection("[Channel2]", "file_bpm", NumarkNS6.updateBpmMeter);
+    
+    // Força o LED a acender assim que o Mixxx abrir
+    NumarkNS6.updateBpmMeter();
     
     engine.beginTimer(1000, function () {
         midi.sendShortMsg(0xB0, 0x50, 0x00); 
@@ -358,15 +364,134 @@ NumarkNS6.MixerTemplate = function() {
         }
     });
 
+    
+
+    // 🎡 ENCODER DE NAVEGAÇÃO (Giro) - Fix do Comando
     this.navigationEncoderTick = new components.Encoder({
-        midi: [0xB0, 0x44], group: "[Library]", stepsize: 1,
-        shift: function() { this.inKey="MoveFocus"; }, unshift: function() { this.inKey="MoveVertical"; },
-        input: function(_c, _ctrl, value) { this.inSetValue(value===0x01?this.stepsize:-this.stepsize); }
+        midi: [0xB0, 0x44],
+        group: "[Library]",
+        input: function (channel, control, value, status, group) {
+            // Se girar pra direita (valores baixos, ex: 1), vai pra baixo (1)
+            // Se girar pra esquerda (valores altos, ex: 127), vai pra cima (-1)
+            var direction = (value < 64) ? 1 : -1;
+            
+            // O comando de Padrão FIFA do Mixxx para navegar em listas é MoveVertical
+            engine.setValue("[Library]", "MoveVertical", direction);
+        }   
     });
+    
+    // 📝 BOTÃO PREPARE / AUTO DJ (Adiciona música na fila)
+    this.autoDjAddButton = new components.Button({
+        midi: [0x90, 0x0D], 
+        group: "[AutoDJ]",
+        input: function (channel, control, value, status, group) {
+            if (value === 0) return; 
+
+            // Comando OFICIAL do Mixxx para jogar a música selecionada pro final do Auto DJ
+            engine.setValue("[Library]", "AutoDjAddBottom", 1);
+
+            // Pisca o LED (Status B0, Nota 0x0D) para você saber que a música foi enviada
+            midi.sendShortMsg(0xB0, 0x0D, 0x7F);
+            engine.beginTimer(150, function() {
+                midi.sendShortMsg(0xB0, 0x0D, 0x00);
+            }, true);
+        }
+    });
+
+    
+    
+    
+    // 👁️ BOTÃO VIEW (Unshift: Big Library | Shift: Toggle Waveforms)
+    this.viewButton = new components.Button({
+        midi: [0x90, 0x01],
+        group: "[Skin]",
+        input: function (channel, control, value, status, group) {
+            if (value === 0) return;
+
+            var isShifted = false;
+            for (var i = 1; i <= 4; i++) {
+                if (NumarkNS6.Decks[i] && NumarkNS6.Decks[i].shiftButton && NumarkNS6.Decks[i].shiftButton.state) {
+                    isShifted = true; break;
+                }
+            }
+
+            if (isShifted) {
+                // MODO SHIFT: Esconde/Mostra Waveforms
+                var currentWave = engine.getValue("[Skin]", "show_waveforms");
+                engine.setValue("[Skin]", "show_waveforms", !currentWave);
+            } else {
+                // MODO NORMAL: Maximiza/Restaura Biblioteca
+                var currentLib = engine.getValue("[Skin]", "show_maximized_library");
+                engine.setValue("[Skin]", "show_maximized_library", !currentLib);
+            }
+        }
+    });
+
+    // 🔘 CLIQUE DO ENCODER (Unshift: Abre/Fecha Pasta | Shift: Ligar/Desligar Auto DJ)
     this.navigationEncoderButton = new components.Button({
-        shift: function() { this.type=components.Button.prototype.types.toggle; this.group="[Skin]"; this.inKey="show_maximized_library"; },
-        unshift: function() { this.type=components.Button.prototype.types.push; this.group="[Library]"; this.inKey="GoToItem"; }
+        midi: [0x90, 0x08],
+        group: "[Library]",
+        input: function (channel, control, value, status, group) {
+            if (value === 0) return; // Ignora quando solta o botão
+
+            var isShifted = false;
+            for (var i = 1; i <= 4; i++) {
+                if (NumarkNS6.Decks[i] && NumarkNS6.Decks[i].shiftButton && NumarkNS6.Decks[i].shiftButton.state) {
+                    isShifted = true; break;
+                }
+            }
+
+            if (isShifted) {
+                // MODO SHIFT: Liga ou desliga o Auto DJ
+                var currentState = engine.getValue("[AutoDJ]", "enabled");
+                engine.setValue("[AutoDJ]", "enabled", !currentState);
+                
+                // Feedback visual rápido no LED do Encoder (pisca para confirmar o clique)
+                midi.sendShortMsg(0xB0, 0x08, 0x7F);
+                engine.beginTimer(100, function() { midi.sendShortMsg(0xB0, 0x08, 0x00); }, true);
+            } else {
+                // MODO NORMAL: Abre ou fecha subpastas (Grupo [Playlist] é o correto)
+                engine.setValue("[Playlist]", "ToggleSelectedSidebarItem", 1);
+            }
+        }
     });
+
+    // 🔙 BOTÃO BACK (Restaurado ao padrão original que você curtiu)
+    this.backButton = new components.Button({
+        midi: [0x90, 0x06], 
+        group: "[Library]",
+        input: function (channel, control, value, status, group) {
+            if (value > 0) {
+                // Simplesmente move o foco para a barra da esquerda
+                engine.setValue("[Library]", "MoveFocus", -1);
+            }
+        }
+    });
+
+    // 🔙 BOTÃO BACK (Foco na Barra Lateral / Pastas)
+    this.backButton = new components.Button({
+        midi: [0x90, 0x06], 
+        group: "[Library]",
+        input: function (channel, control, value, status, group) {
+            if (value > 0) {
+                // Move o foco para a esquerda (pastas/playlists)
+                engine.setValue("[Library]", "MoveFocus", -1);
+            }
+        }
+    });
+
+    // 🔜 BOTÃO FWD (Foco na Lista de Músicas)
+    this.fwdButton = new components.Button({
+        midi: [0x90, 0x07], 
+        group: "[Library]",
+        input: function (channel, control, value, status, group) {
+            if (value > 0) {
+                // Move o foco para a direita (lista de faixas)
+                engine.setValue("[Library]", "MoveFocus", 1);
+            }
+        }
+    });
+
 };
 NumarkNS6.MixerTemplate.prototype = new components.ComponentContainer();
 
@@ -555,7 +680,29 @@ NumarkNS6.Deck = function(channel) {
         }
     });
 
-    this.loadButton = new components.Button({ midi: [0x90+channel, 0x06], shift: function() { this.inKey="eject"; }, unshift: function() { this.inKey="LoadSelectedTrack"; } });
+    // 🧠 Descobre qual nota usar dependendo do lado (Esquerda = 0x0C / Direita = 0x0E)
+    var loadNote = (channel === 1 || channel === 3) ? 0x0C : 0x0E;
+
+    // 📂 BOTÃO LOAD A / B (Com Eject via Shift)
+    this.loadButton = new components.Button({ 
+        midi: [0x90 + channel, loadNote],
+        group: groupName,
+        input: function (ch, control, value, status, group) {
+            if (value === 0) return; // Só age quando você aperta o botão
+
+            var deckNum = script.deckFromGroup(group);
+            var deck = NumarkNS6.Decks[deckNum];
+
+            // Verifica se o Shift deste deck está pressionado
+            if (deck && deck.shiftButton && deck.shiftButton.state) {
+                // MODO SHIFT: Ejeta a música
+                engine.setValue(group, "eject", 1);
+            } else {
+                // MODO NORMAL: Carrega a música selecionada
+                engine.setValue(group, "LoadSelectedTrack", 1);
+            }
+        }
+    });
 
     this.manageChannelIndicator = () => {
         this.duration=engine.getParameter(theDeck.group, "duration");
@@ -936,6 +1083,78 @@ NumarkNS6.FX.init = function() {
         key: "mix",
     });
 
+    // ==========================================================
+    // 🎛️ 1. FX PARAMETER (Girar para alterar intensidade - 0x56 e 0x58)
+    // ==========================================================
+    NumarkNS6.FX.selectLeft = new components.Button({
+        midi: [0xB0, 0x56],
+        group: "[EffectRack1_EffectUnit1_Effect1]",
+        input: function(channel, control, value, status, group) {
+            var shift = (NumarkNS6.Decks[1].shiftButton.state || NumarkNS6.Decks[3].shiftButton.state);
+            var target = "[EffectRack1_EffectUnit1_Effect" + (shift ? "2" : "1") + "]";
+            
+            // Aumenta ou diminui a intensidade em 5% por clique
+            var direction = (value === 0x01 || value < 64) ? 0.05 : -0.05;
+            var current = engine.getValue(target, "meta");
+            
+            // Trava para não passar de 100% ou cair de 0%
+            engine.setValue(target, "meta", Math.max(0, Math.min(1, current + direction)));
+        }
+    });
+
+    NumarkNS6.FX.selectRight = new components.Button({
+        midi: [0xB0, 0x58],
+        group: "[EffectRack1_EffectUnit2_Effect1]",
+        input: function(channel, control, value, status, group) {
+            var shift = (NumarkNS6.Decks[2].shiftButton.state || NumarkNS6.Decks[4].shiftButton.state);
+            var target = "[EffectRack1_EffectUnit2_Effect" + (shift ? "2" : "1") + "]";
+            
+            var direction = (value === 0x01 || value < 64) ? 0.05 : -0.05;
+            var current = engine.getValue(target, "meta");
+            
+            engine.setValue(target, "meta", Math.max(0, Math.min(1, current + direction)));
+        }
+    });
+
+    // ==========================================================
+    // 🎛️ 2. FX SELECT (Girar para escolher o efeito - 0x5A e 0x5B)
+    // ==========================================================
+    NumarkNS6.FX.encoderLeft = new components.Button({
+        midi: [0xB0, 0x5A],
+        group: "[EffectRack1_EffectUnit1_Effect1]", 
+        input: function(channel, control, value, status, group) {
+            var shift = (NumarkNS6.Decks[1].shiftButton.state || NumarkNS6.Decks[3].shiftButton.state);
+            var target = "[EffectRack1_EffectUnit1_Effect" + (shift ? "2" : "1") + "]";
+            
+            // 1 = Direita (Desce a lista), -1 = Esquerda (Sobe a lista)
+            var direction = (value === 0x01 || value < 64) ? 1 : -1;
+            engine.setValue(target, "effect_selector", direction);
+        }
+    });
+
+    NumarkNS6.FX.encoderRight = new components.Button({
+        midi: [0xB0, 0x5B],
+        group: "[EffectRack1_EffectUnit2_Effect1]", 
+        input: function(channel, control, value, status, group) {
+            var shift = (NumarkNS6.Decks[2].shiftButton.state || NumarkNS6.Decks[4].shiftButton.state);
+            var target = "[EffectRack1_EffectUnit2_Effect" + (shift ? "2" : "1") + "]";
+            
+            var direction = (value === 0x01 || value < 64) ? 1 : -1;
+            engine.setValue(target, "effect_selector", direction);
+        }
+    });
+
+    // 🔘 CLIQUES DO ENCODER FX (Blindagem contra crash)
+    NumarkNS6.FX.selectLeftBtn = new components.Button({
+        midi: [0x90, 0x56],
+        input: function() { /* Vazio por enquanto, só pra não travar */ }
+    });
+
+    NumarkNS6.FX.selectRightBtn = new components.Button({
+        midi: [0x90, 0x58],
+        input: function() { /* Vazio por enquanto, só pra não travar */ }
+    });
+
     // Conexões: Se qualquer efeito (1 ou 2) mudar, atualiza o LED
     engine.makeConnection("[EffectRack1_EffectUnit1_Effect1]", "enabled", NumarkNS6.FX.updateLEDs);
     engine.makeConnection("[EffectRack1_EffectUnit1_Effect2]", "enabled", NumarkNS6.FX.updateLEDs);
@@ -988,4 +1207,92 @@ NumarkNS6.FX.initRouting = function() {
             midi.sendShortMsg(0xB0, config.led, value > 0 ? 0x7F : 0x00);
         }).trigger();
     });
+};
+
+// ==========================================================
+// 🎛️ CONTROLES DE TELA - MODO SIMPLIFICADO (Função Pura)
+// ==========================================================
+
+NumarkNS6.btnEfeitos = function(ch, ctrl, val) {
+    if (val > 0) engine.setValue("[Skin]", "show_effectrack", !engine.getValue("[Skin]", "show_effectrack"));
+};
+
+NumarkNS6.btnMixer = function(ch, ctrl, val) {
+    if (val > 0) engine.setValue("[Skin]", "show_mixer", !engine.getValue("[Skin]", "show_mixer"));
+};
+
+NumarkNS6.btnSamplers = function(ch, ctrl, val) {
+    if (val > 0) engine.setValue("[Skin]", "show_samplers", !engine.getValue("[Skin]", "show_samplers"));
+};
+
+// ==========================================================
+// 🚀 MOTOR DO BPM METER (Versão Calibrada - Suave)
+// ==========================================================
+
+// NumarkNS6.updateBpmMeter = function() {
+//     var bpm1 = engine.getValue("[Channel1]", "file_bpm") * (1 + engine.getValue("[Channel1]", "rate"));
+//     var bpm2 = engine.getValue("[Channel2]", "file_bpm") * (1 + engine.getValue("[Channel2]", "rate"));
+
+//     if (bpm1 <= 0 || bpm2 <= 0) {
+//         midi.sendShortMsg(0xB0, 0x36, 0x00);
+//         return;
+//     }
+
+//     var diff = bpm1 - bpm2;
+
+//     // 🎛️ AJUSTE DE SENSIBILIDADE (Aumente o divisor para ficar mais lento/suave)
+//     // Se usar 1.0: Cada 1 BPM de diferença move 1 LED.
+//     // Se usar 2.0: Cada 2 BPM de diferença move 1 LED (Mais suave).
+//     var divisor = 30; 
+    
+//     var center = 6;
+//     var ledOffset = Math.round(diff / divisor);
+//     var ledValue = center + ledOffset;
+
+//     // Trava para não sair dos limites (1 a 11)
+//     if (ledValue < 1) ledValue = 1;
+//     if (ledValue > 11) ledValue = 11;
+
+//     // 💡 LOG DE DEBUG (Opcional: Caso queira ver os números no console do Mixxx)
+//     // print("Diff BPM: " + diff.toFixed(2) + " -> LED: " + ledValue);
+
+//     midi.sendShortMsg(0xB0, 0x36, ledValue);
+// };
+NumarkNS6.lastBpmLed = -1;
+
+NumarkNS6.updateBpmMeter = function() {
+    // 🎵 Pega a velocidade EXATA que está tocando agora nos decks
+    var bpm1 = engine.getValue("[Channel1]", "bpm");
+    var bpm2 = engine.getValue("[Channel2]", "bpm");
+
+    if (bpm1 <= 0 || bpm2 <= 0) {
+        if (NumarkNS6.lastBpmLed !== 0) {
+            midi.sendShortMsg(0xB0, 0x36, 0x00);
+            NumarkNS6.lastBpmLed = 0;
+        }
+        return;
+    }
+
+    // Calcula a diferença real de BPMs entre as duas músicas
+    var diff = bpm1 - bpm2;
+
+    // 🎛️ DIVISOR ABSOLUTO DE BPM
+    // Se o divisor for 0.5: O LED pula a cada MEIO BPM de diferença.
+    // A barra toda (5 LEDs pro lado) vai cobrir um erro de +/- 2.5 BPM.
+    // Se você quiser que a barra seja menos sensível (cubra +/- 5 BPM), mude para 1.0.
+    var divisor = 0.5; 
+    
+    var center = 6;
+    var ledOffset = Math.round(diff / divisor);
+    var ledValue = center + ledOffset;
+
+    // Trava para a luz não sair da barra (limites de 1 a 11)
+    if (ledValue < 1) ledValue = 1;
+    if (ledValue > 11) ledValue = 11;
+
+    // 🛡️ ESTABILIDADE (Só envia o comando se a luz mudar)
+    if (ledValue !== NumarkNS6.lastBpmLed) {
+        midi.sendShortMsg(0xB0, 0x36, ledValue);
+        NumarkNS6.lastBpmLed = ledValue;
+    }
 };

@@ -934,7 +934,80 @@
           <script-binding/>
         </options>
       </control>
+      <control>
+        <group>[EffectRack1_EffectUnit1_Effect1]</group>
+        <key>NumarkNS6.FX.selectLeft.input</key>
+        <status>0xB0</status>
+        <midino>0x56</midino>
+        <options><script-binding/></options>
+      </control>
 
+      <control>
+        <group>[EffectRack1_EffectUnit2_Effect1]</group>
+        <key>NumarkNS6.FX.selectRight.input</key>
+        <status>0xB0</status>
+        <midino>0x58</midino>
+        <options><script-binding/></options>
+      </control>
+      
+      <!-- End Fx -->
+      <control>
+        <group>[Skin]</group>
+        <key>NumarkNS6.btnEfeitos</key>
+        <status>0x90</status><midino>0x0B</midino>
+        <options><script-binding/></options>
+      </control>
+      
+      <control>
+        <group>[Skin]</group>
+        <key>NumarkNS6.btnMixer</key>
+        <status>0x90</status><midino>0x09</midino>
+        <options><script-binding/></options>
+      </control>
+      
+      <control>
+        <group>[Skin]</group>
+        <key>NumarkNS6.btnSamplers</key>
+        <status>0x90</status><midino>0x0A</midino>
+        <options><script-binding/></options>
+      </control>
+      <control>
+        <group>[AutoDJ]</group>
+        <key>NumarkNS6.Mixer.autoDjAddButton.input</key>
+        <status>0x90</status>
+        <midino>0x0D</midino>
+        <options>
+          <script-binding/>
+        </options>
+      </control>
+      <control>
+        <group>[Skin]</group>
+        <key>NumarkNS6.Mixer.viewButton.input</key>
+        <status>0x90</status>
+        <midino>0x01</midino>
+        <options>
+          <script-binding/>
+        </options>
+      </control>
+      <control>
+        <group>[Library]</group>
+        <key>NumarkNS6.Mixer.backButton.input</key>
+        <status>0x90</status>
+        <midino>0x06</midino>
+        <options>
+          <script-binding/>
+        </options>
+      </control>
+
+      <control>
+        <group>[Library]</group>
+        <key>NumarkNS6.Mixer.fwdButton.input</key>
+        <status>0x90</status>
+        <midino>0x07</midino>
+        <options>
+          <script-binding/>
+        </options>
+      </control>
       <control>
         <group>[Library]</group>
         <key>NumarkNS6.Mixer.navigationEncoderTick.input</key>
@@ -1152,77 +1225,34 @@
           <script-binding />
         </options>
       </control>
+      
       <control>
         <group>[Channel1]</group>
         <key>NumarkNS6.Decks[1].loadButton.input</key>
         <status>0x91</status>
-        <midino>0x06</midino>
-        <options>
-          <script-binding />
-        </options>
+        <midino>0x0C</midino>
+        <options><script-binding /></options>
       </control>
       <control>
         <group>[Channel2]</group>
         <key>NumarkNS6.Decks[2].loadButton.input</key>
         <status>0x92</status>
-        <midino>0x06</midino>
-        <options>
-          <script-binding />
-        </options>
+        <midino>0x0E</midino>
+        <options><script-binding /></options>
       </control>
       <control>
         <group>[Channel3]</group>
         <key>NumarkNS6.Decks[3].loadButton.input</key>
         <status>0x93</status>
-        <midino>0x06</midino>
-        <options>
-          <script-binding />
-        </options>
+        <midino>0x0C</midino>
+        <options><script-binding /></options>
       </control>
       <control>
         <group>[Channel4]</group>
         <key>NumarkNS6.Decks[4].loadButton.input</key>
         <status>0x94</status>
-        <midino>0x06</midino>
-        <options>
-          <script-binding />
-        </options>
-      </control>
-      <control>
-        <group>[Channel1]</group>
-        <key>NumarkNS6.Decks[1].loadButton.input</key>
-        <status>0x81</status>
-        <midino>0x06</midino>
-        <options>
-          <script-binding />
-        </options>
-      </control>
-      <control>
-        <group>[Channel2]</group>
-        <key>NumarkNS6.Decks[2].loadButton.input</key>
-        <status>0x82</status>
-        <midino>0x06</midino>
-        <options>
-          <script-binding />
-        </options>
-      </control>
-      <control>
-        <group>[Channel3]</group>
-        <key>NumarkNS6.Decks[3].loadButton.input</key>
-        <status>0x83</status>
-        <midino>0x06</midino>
-        <options>
-          <script-binding />
-        </options>
-      </control>
-      <control>
-        <group>[Channel4]</group>
-        <key>NumarkNS6.Decks[4].loadButton.input</key>
-        <status>0x84</status>
-        <midino>0x06</midino>
-        <options>
-          <script-binding />
-        </options>
+        <midino>0x0E</midino>
+        <options><script-binding /></options>
       </control>
       <control>
         <group>[Channel1]</group>

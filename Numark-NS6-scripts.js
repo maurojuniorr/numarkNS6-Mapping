@@ -21,7 +21,7 @@ NumarkNS6.isProcessingHarmonic = [null, false, false, false, false];
 NumarkNS6.rateRanges = [0.04, 0.08, 0.16, 0.32, 0.64];
 
 NumarkNS6.blinkState = 0;
-NumarkNS6.warnAfterTime = 30; 
+NumarkNS6.warnAfterTime = 60; 
 NumarkNS6.blinkInterval = 1000; 
 NumarkNS6.encoderResolution = 0.05; 
 NumarkNS6.resetHotCuePageOnTrackLoad = true; 
